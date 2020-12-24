@@ -1,0 +1,70 @@
+blueprint:
+  name: "Scheduled Entity - "
+  description: Toggle an entity's state based on a daily On/Off schedule
+  domain: automation
+  input:
+    on_datetime:
+      name: On Time
+      selector:
+        entity:
+          domain: input_datetime
+    off_datetime:
+      name: Off Time
+      selector:
+        entity:
+          domain: input_datetime
+    target_entity:
+      name: Target Entity
+      selector:
+        entity:
+    blocker_boolean:
+      name: Boolean
+      description: Boolean to Enable/Disable Schedule
+      default: input_boolean.none
+      selector:
+        entity:
+          domain: input_boolean
+
+variables:
+  on_time: !input 'on_datetime'
+  off_time: !input 'off_datetime'
+  target_entity: !input 'target_entity'
+  target_domain: "{{ states[target_entity].domain }}"
+  blocker_bool: !input 'blocker_boolean'
+
+trigger:
+  - platform: time
+    at: !input on_datetime
+  - platform: time
+    at: !input off_datetime
+
+condition:
+  - condition: template
+    value_template: "{{ blocker_bool == 'input_boolean.none' or states[blocker_bool].state == 'on' }}"
+
+action:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.platform == 'time' and
+          (as_timestamp(trigger.now) | timestamp_custom('%H:%M', true)) == (states[on_time].state [0:5]) }}
+      sequence:
+      - service: >
+          {{ target_domain + ".turn_on" }}
+        data: {}
+        entity_id: !input 'target_entity'
+
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.platform == 'time' and
+          (as_timestamp(trigger.now) | timestamp_custom('%H:%M', true)) == (states[off_time].state [0:5]) }}
+      sequence:
+      - service: >
+          {{ target_domain + ".turn_off" }}
+        data: {}
+        entity_id: !input 'target_entity'
+
+mode: restart
