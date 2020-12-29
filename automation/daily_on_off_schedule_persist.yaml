@@ -1,5 +1,5 @@
 blueprint:
-  name: "Scheduled Entity (Persistent) - "
+  name: "Daily On|Off Schedule (Persistent) - "
   description: Maintain an entity's state based on a daily On/Off schedule
   domain: automation
   input:

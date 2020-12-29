@@ -1,5 +1,5 @@
 blueprint:
-  name: "Scheduled Entity - "
+  name: "Daily On|Off Schedule - "
   description: Toggle an entity's state based on a daily On/Off schedule
   domain: automation
   input:

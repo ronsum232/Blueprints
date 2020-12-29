@@ -1,0 +1,73 @@
+blueprint:
+  name: "Dusk to Dawn (Persistent) - "
+  description: Persistent Dusk to Dawn Scheduler
+  domain: automation
+  input:
+    target_entity:
+      name: Target Entity
+      selector:
+        entity:
+    blocker_boolean:
+      name: Boolean Blocker
+      description: Boolean to Enable/Disable Schedule
+      default: input_boolean.none
+      selector:
+        entity:
+          domain: input_boolean
+    sunrise_offset:
+      name: Sunrise (Off) Offset
+      description: "e.g. +00:15:00 or -00:15:00"
+      default: "+00:00:00"
+    sunset_offset:
+      name: Sunset (On) Offset
+      description: "e.g. +00:15:00 or -00:15:00"
+      default: "+00:00:00"
+
+variables:
+  target_entity: !input 'target_entity'
+  target_domain: "{{ states[target_entity].domain }}"
+  blocker_bool: !input 'blocker_boolean'
+
+trigger:
+  - platform: sun
+    event: sunset
+    offset: !input 'sunset_offset'
+  - platform: sun
+    event: sunrise
+    offset: !input 'sunrise_offset'
+  - platform: state
+    entity_id:
+      # - sensor.time
+      - !input 'target_entity'
+      - !input 'blocker_boolean'
+  - platform: homeassistant
+    event: start
+
+condition:
+# Proceed if no blocker is set, or if blocker is 'on'
+  - condition: template
+    value_template: "{{ blocker_bool == 'input_boolean.none' or states[blocker_bool].state == 'on' }}"
+
+action:
+  - choose:
+      - conditions:
+          - condition: or
+            conditions:
+              - condition: sun
+                after: sunset
+                after_offset: !input 'sunset_offset'
+              - condition: sun
+                before: sunrise
+                before_offset: !input 'sunrise_offset'
+        sequence:
+          - service: >
+              {{ target_domain + ".turn_on" }}
+            data: {}
+            entity_id: !input 'target_entity'
+    default:
+      - service: >
+          {{ target_domain + ".turn_off" }}
+        data: {}
+        entity_id: !input 'target_entity'
+
+mode: restart
