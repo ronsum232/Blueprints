@@ -1,14 +1,14 @@
 blueprint:
-  name: "Daily On|Off Schedule (Persistent) - "
-  description: Maintain an entity's state based on a daily On/Off schedule
+  name: " - Daily On|Off Schedule (Persistent)"
+  description: For domains supporting On/Off state. Input_datetimes needed to set and maintain On/Off.
   domain: automation
   input:
-    on_datetime:
+    on_time:
       name: On Time
       selector:
         entity:
           domain: input_datetime
-    off_datetime:
+    off_time:
       name: Off Time
       selector:
         entity:
@@ -26,27 +26,30 @@ blueprint:
           domain: input_boolean
 
 variables:
-  on_time: !input 'on_datetime'
-  off_time: !input 'off_datetime'
+  on_time: !input 'on_time'
+  off_time: !input 'off_time'
   target_entity: !input 'target_entity'
   target_domain: "{{ states[target_entity].domain }}"
   blocker_bool: !input 'blocker_boolean'
 
 trigger:
   - platform: time
-    at: !input on_datetime
+    id: on_time
+    at: !input on_time
   - platform: time
-    at: !input off_datetime
+    id: off_time
+    at: !input off_time
   - platform: homeassistant
+    id: ha_start
     event: start
   - platform: state
+    id: persist_trigs
     entity_id:
-      # sensor.time evaluates every minute
-      - sensor.time
-      - !input 'on_datetime'
-      - !input 'off_datetime'
-      - !input 'blocker_boolean'
-      - !input 'target_entity'
+      - sensor.time               # sensor.time evaluates every minute
+      - !input 'blocker_boolean'  # Toggling blocker
+      - !input 'on_time'          # Changed on_time helper
+      - !input 'off_time'         # Changed off_time helper
+      - !input 'target_entity'    # Target changes state
 
 condition:
 # Proceed if no blocker is set, or if blocker is 'on'
@@ -57,10 +60,8 @@ action:
 # If triggered time = on time
   - choose:
     - conditions:
-      - condition: template
-        value_template: >-
-          {{ trigger.platform == 'time' and
-          (as_timestamp(trigger.now) | timestamp_custom('%H:%M', true)) == (states[on_time].state [0:5]) }}
+      - condition: trigger
+        id: on_time
       sequence:
       - service: >
           {{ target_domain + ".turn_on" }}
@@ -70,10 +71,8 @@ action:
 # If triggered time = off time
   - choose:
     - conditions:
-      - condition: template
-        value_template: >-
-          {{ trigger.platform == 'time' and
-          (as_timestamp(trigger.now) | timestamp_custom('%H:%M', true)) == (states[off_time].state [0:5]) }}
+      - condition: trigger
+        id: off_time
       sequence:
       - service: >
           {{ target_domain + ".turn_off" }}
@@ -83,18 +82,14 @@ action:
 # If HA restarted, entity state changes, or any setting changes
   - choose:
       - conditions:
-          - condition: template
-            value_template: >-
-              {{ trigger.platform == 'homeassistant' or 
-                trigger.platform == 'state' }}
+          - condition: trigger
+            id: persist_trigs
         sequence:
           - choose:
               - conditions:
-                  - condition: template
-                    value_template: >-
-                      {{ states[on_time].state <=
-                      states('sensor.time') <
-                      states[off_time].state }}
+                  - condition: time
+                    after: !input on_time
+                    before: !input off_time
                 sequence:
                   - service: >
                       {{ target_domain + ".turn_on" }}

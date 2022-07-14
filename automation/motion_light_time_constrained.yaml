@@ -1,6 +1,6 @@
 blueprint:
   name: Motion-activated Light with Time Constraint
-  description: Turn on a light when motion is detected between times.
+  description: Turn on a light when motion is detected between times..
   domain: automation
   # source_url: https://github.com/home-assistant/core/blob/dev/homeassistant/components/automation/blueprints/motion_light.yaml
   input:
@@ -37,23 +37,17 @@ variables:
   time_limit_before: !input time_before_entity
   time_limit_after: !input time_after_entity
 
-
-# If motion is detected within the delay,
-# we restart the script.
-mode: restart
-max_exceeded: silent
-
+# Begin Automation
 trigger:
   platform: state
   entity_id: !input motion_entity
-  from: "off"
+  # from: "off"
   to: "on"
 
 condition:
-  - condition: template
-    value_template: >
-      {% set current_time = now().strftime("%H:%M")  %}
-      {{ time_limit_before > current_time > time_limit_after }}
+  - condition: time
+    after: !input time_after_entity
+    before: !input time_before_entity
 
 action:
   - service: light.turn_on
@@ -61,8 +55,14 @@ action:
   - wait_for_trigger:
       platform: state
       entity_id: !input motion_entity
-      from: "on"
+      # from: "on"
       to: "off"
   - delay: !input no_motion_wait
   - service: light.turn_off
     target: !input light_target
+
+
+# If motion is detected within the delay,
+# we restart the script.
+mode: restart
+max_exceeded: silent

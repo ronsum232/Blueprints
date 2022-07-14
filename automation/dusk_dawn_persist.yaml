@@ -53,7 +53,7 @@ action:
       - conditions:
           - condition: or
             conditions:
-              - condition: sun
+              - condition: sun # https://www.home-assistant.io/docs/scripts/conditions/#sunsetsunrise-condition
                 after: sunset
                 after_offset: !input 'sunset_offset'
               - condition: sun

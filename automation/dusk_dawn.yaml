@@ -26,7 +26,7 @@ blueprint:
 variables:
   target_entity: !input 'target_entity'
   target_domain: "{{ states[target_entity].domain }}"
-  blocker_bool: !input 'blocker_boolean'
+  blocker_boolean: !input 'blocker_boolean'
 
 trigger:
   - platform: state
@@ -42,14 +42,14 @@ trigger:
 condition:
 # Proceed if no blocker is set, or if blocker is 'on'
   - condition: template
-    value_template: "{{ blocker_bool == 'input_boolean.none' or states[blocker_bool].state == 'on' }}"
+    value_template: "{{ blocker_boolean == 'input_boolean.none' or states[blocker_bool].state == 'on' }}"
 
 action:
   - choose:
       - conditions:
           - condition: or
             conditions:
-              - condition: sun
+              - condition: sun # https://www.home-assistant.io/docs/scripts/conditions/#sunsetsunrise-condition
                 after: sunset
                 after_offset: !input 'sunset_offset'
               - condition: sun
